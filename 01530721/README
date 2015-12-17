@@ -1,0 +1,7 @@
+# How to use 
+1. make 
+2. ./server
+3. ./client 
+  if you want to chang ip address for client application, you can modify value for serv_addr.sin_addr.s_addr in client.c
+
+4. Enjoy!
