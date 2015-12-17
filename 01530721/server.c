@@ -20,6 +20,7 @@ typedef void (*signal_t)(int);
 void sig_handler(int signo)
 {
     printf("SIGNAL thid %d : %d\n", pthread_self(),signo);
+	sleep(1);
 }
 
 int main(int argc , char *argv[])
@@ -114,9 +115,9 @@ void *connection_handler(void *socket_desc)
 
 	sigemptyset(&newmask);
 	sigaddset(&newmask, SIGUSR1);
-	signal(SIGUSR1, sig_handler);
-	//act.sa_handler = sig_handler;
-	//sigaction(SIGINT, &act, NULL);
+	//signal(SIGUSR1, sig_handler);
+	act.sa_handler = sig_handler;
+	sigaction(SIGUSR1, &act, NULL);
 	pthread_sigmask(SIG_UNBLOCK, &newmask, NULL);
 
 	memset(&msg, 0, sizeof(msg));
