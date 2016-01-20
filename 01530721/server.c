@@ -14,6 +14,7 @@
 
 //the thread function
 void *connection_handler(void *);
+void *pthreadsig(void *);
 typedef void (*signal_t)(int);
 
 //signal handler
@@ -27,7 +28,16 @@ int main(int argc , char *argv[])
 {
 	int socket_desc , client_sock , c , *new_sock;
 	struct sockaddr_in server , client;
+	pthread_t sigusrthread;
+	int status;
 
+
+	// SIGUSR1 mask
+	sigset_t newmask;
+	sigemptyset(&newmask);
+	sigaddset(&newmask, SIGUSR1);
+	pthread_sigmask(SIG_BLOCK, &newmask, NULL);
+	
 	//Create socket
 	socket_desc = socket(AF_INET , SOCK_STREAM , 0);
 	if (socket_desc == -1)
@@ -35,6 +45,12 @@ int main(int argc , char *argv[])
 		printf("Could not create socket");
 	}
 	//puts("Socket created");
+
+	if( pthread_create(&sigusrthread, NULL, pthreadsig, NULL) < 0)
+	{
+		perror("could not create sigthread");
+		return 1;
+	}
 
 	//Prepare the sockaddr_in structure
 	server.sin_family = AF_INET;
@@ -47,7 +63,6 @@ int main(int argc , char *argv[])
 				(char *)&one, sizeof(one))) {
 		printf("Could not set SO_REUSEADDR");
 	} 
-
 
 	//Bind
 	if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
@@ -65,7 +80,6 @@ int main(int argc , char *argv[])
 	//puts("Waiting for incoming connections...");
 	c = sizeof(struct sockaddr_in);
 
-	c=sizeof(struct sockaddr_in);
 	while(client_sock=accept(socket_desc,(struct sockaddr*)&client,(socklen_t*)&c))
 	{
 		//puts("Connection accepted");
@@ -73,11 +87,6 @@ int main(int argc , char *argv[])
 		pthread_t sniffer_thread;
 		new_sock = malloc(1);
 		*new_sock = client_sock;
-		// SIGUSR1 mask
-		sigset_t newmask;
-		sigemptyset(&newmask);
-		sigaddset(&newmask, SIGUSR1);
-		pthread_sigmask(SIG_BLOCK, &newmask, NULL);
 
 		if( pthread_create( &sniffer_thread , NULL ,  connection_handler , (void*) new_sock) < 0)
 		{
@@ -95,6 +104,9 @@ int main(int argc , char *argv[])
 	}
 	return 0;
 }
+
+/* signal thread  */
+
 /*
    This will handle connection for each client
    */
@@ -109,16 +121,6 @@ void *connection_handler(void *socket_desc)
 	char* tmpBuff = (char*) malloc (MAX_SIZE);
 	struct iovec   iov[1];
 	struct msghdr  msg;
-	struct sigaction act;
-	sigset_t newmask;
-	signal_t handler;
-
-	sigemptyset(&newmask);
-	sigaddset(&newmask, SIGUSR1);
-	//signal(SIGUSR1, sig_handler);
-	act.sa_handler = sig_handler;
-	sigaction(SIGUSR1, &act, NULL);
-	pthread_sigmask(SIG_UNBLOCK, &newmask, NULL);
 
 	memset(&msg, 0, sizeof(msg));
 	memset(iov, 0, sizeof(iov));
@@ -144,4 +146,30 @@ void *connection_handler(void *socket_desc)
 		perror("recvmsg failed");
 	}
 	return 0;
+}
+
+void *pthreadsig(void *arg)
+{
+	struct sigaction act;
+	sigset_t newmask;
+	signal_t handler;
+	char* srcBuff = (char*) malloc (1024);
+	char* dstBuff = (char*) malloc (1024);
+
+	sigemptyset(&newmask);
+	sigaddset(&newmask, SIGUSR1);
+	act.sa_handler = sig_handler;
+	sigaction(SIGUSR1, &act, NULL);
+	pthread_sigmask(SIG_UNBLOCK, &newmask, NULL);
+
+	while(1)
+	{
+		//memcpy( dstBuff, srcBuff, 1024);
+		sleep(1);
+	}
+
+	free(dstBuff);
+	free(srcBuff);
+	pthread_exit(NULL);
+
 }
