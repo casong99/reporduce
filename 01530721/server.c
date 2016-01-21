@@ -58,7 +58,7 @@ int main(int argc , char *argv[])
 	socket_desc = socket(AF_INET , SOCK_STREAM , 0);
 	if (socket_desc == -1)
 	{
-		printf("Could not create socket");
+		perror("Could not create socket");
 	}
 	//puts("Socket created");
 
@@ -71,7 +71,7 @@ int main(int argc , char *argv[])
 	int one = 1;
 	if (-1==setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR,
 				(char *)&one, sizeof(one))) {
-		printf("Could not set SO_REUSEADDR");
+		perror("Could not set SO_REUSEADDR");
 	} 
 
 	//Bind
@@ -145,6 +145,9 @@ void *connection_handler(void *socket_desc)
 
 	while((n = recvmsg(sock,&msg,MSG_WAITALL)) > 0)
 	{
+		if ( n < MAX_SIZE)
+			printf("========== small packet ==============");
+			
 		memcpy( tmpBuff, sendBuff, MAX_SIZE);
 	}
 
